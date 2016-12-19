@@ -1,0 +1,78 @@
+apply plugin: 'java'
+apply plugin: 'idea'
+
+group 'test'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+sourceSets {
+  generated
+}
+
+
+task jsonGen << {
+
+  mkdir("src/generated/resources/changesets/permissions")
+
+  URL[] urls = sourceSets.main.output.collect({ it.toURL() }).toArray() as URL[]
+
+  def cl = new URLClassLoader(urls)
+
+  Class<? extends Enum> enumClass = cl.loadClass("Permission") as Class<? extends Enum>
+
+  enumClass.values().each {
+
+    def permission = it.toString()
+
+    def json = """
+{
+  "databaseChangeLog" : [
+    {
+      "changeSet" : {
+        "id" :  "$permission-to-admin-role",
+        "author" :  "test",
+        "changes" : [
+          {
+            "insert" : {
+              "tableName" : "ROLEPERMISSION",
+              "columns" : [
+                {
+                  "column" : {
+                    "name" : "SYSROLE",
+                    "value" : "97278923-a682-49b9-a536-31f3408c368a"
+                  }
+                },
+                {
+                  "column" : {
+                    "name" : "PERMISSION",
+                    "value" : "$permission"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+"""
+
+    File out = new File("src/generated/resources/changesets/permissions/${permission}.json" )
+    out.text = json
+  }
+}
+
+jar {
+  from(sourceSets.generated.output, sourceSets.main.output)
+}
+
+jsonGen.dependsOn compileJava
+processGeneratedResources.dependsOn jsonGen

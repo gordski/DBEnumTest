@@ -68,6 +68,9 @@ task jsonGen << {
     File out = new File("src/generated/resources/changesets/permissions/${permission}.json" )
     out.text = json
   }
+  
+  // Close the classloader to avoid holding files open.
+  cl.close()
 }
 
 jar {
